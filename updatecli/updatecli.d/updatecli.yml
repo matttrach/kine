@@ -1,0 +1,70 @@
+---
+name: "Bump Go version in updatecli"
+scms:
+  kine:
+    kind: "github"
+    spec:
+      user: "{{ .github.user }}"
+      email: "{{ .github.email }}"
+      username: "{{ requiredEnv .github.username }}"
+      token: '{{ requiredEnv .github.token }}'
+      owner: "{{ .kine.org }}"
+      repository: "{{ .kine.repo }}"
+      branch: "{{ .kine.branch }}"
+      commitmessage:
+        title: "Bump Go version in updatecli"
+  go:
+    kind: "github"
+    spec:
+      user: "{{ .github.user }}"
+      email: "{{ .github.email }}"
+      username: "{{ requiredEnv .github.username }}"
+      token: '{{ requiredEnv .github.token }}'
+      owner: "{{ .go.org }}"
+      repository: "{{ .go.repo }}"
+      branch: "{{ .go.branch }}"
+
+#actions:
+#  # this creates a pull request which is not allowed to automerge
+#  # the title is set here
+#  # the commit message is set in the scm config above
+#  # there is no description and no tags
+#  github:
+#    kind: "github/pullrequest"
+#    title: "Bump Go version"
+#    scmid: "kine"
+#    spec:
+#      automerge: false
+#
+
+sources:
+  latestGoTag:
+    name: "Get latest Go 1.x tag"
+    kind: "gittag"
+    scmid: "go"
+    spec:
+      versionfilter:
+        kind: latest
+    transformers:
+      - trimprefix: "go"
+
+# https://www.updatecli.io/docs/plugins/resource/file/#_reference
+conditions:
+  updatecliWorkflowUsesLatestGoVersion:
+    name: "Check if go version in workflow config matches latest go tag"
+    kind: "yaml"
+    scmid: "kine"
+    sourceid: latestGoTag
+    spec:
+      file: ".github/workflows/updatecli.yml"
+      key: jobs.updatecli.steps.1.with.go-version
+
+targets:
+  updatecliWorkflowUsesLatestGoVersion:
+    name: "Update go version in workflow to match latest go tag"
+    kind: "yaml"
+    scmid: "kine"
+    sourceid: latestGoTag
+    spec:
+      file: ".github/workflows/updatecli.yml"
+      key: jobs.updatecli.steps.1.with.go-version
