@@ -11,8 +11,6 @@ scms:
       owner: "{{ .kine.org }}"
       repository: "{{ .kine.repo }}"
       branch: "{{ .kine.branch }}"
-      commitmessage:
-        title: "Bump Go version in updatecli"
   go:
     kind: "github"
     spec:
@@ -24,19 +22,6 @@ scms:
       repository: "{{ .go.repo }}"
       branch: "{{ .go.branch }}"
 
-#actions:
-#  # this creates a pull request which is not allowed to automerge
-#  # the title is set here
-#  # the commit message is set in the scm config above
-#  # there is no description and no tags
-#  github:
-#    kind: "github/pullrequest"
-#    title: "Bump Go version"
-#    scmid: "kine"
-#    spec:
-#      automerge: false
-#
-
 sources:
   latestGoTag:
     name: "Get latest Go 1.x tag"
@@ -44,27 +29,41 @@ sources:
     scmid: "go"
     spec:
       versionfilter:
-        kind: latest
+        kind: "regex"
+        pattern: 'go1\.[2-9][0-9]*\.\d$' # >= go1.20 < go2
     transformers:
       - trimprefix: "go"
 
-# https://www.updatecli.io/docs/plugins/resource/file/#_reference
 conditions:
   updatecliWorkflowUsesLatestGoVersion:
-    name: "Check if go version in workflow config matches latest go tag"
+    name: "If go version in workflow config doesn't match latest go tag"
     kind: "yaml"
     scmid: "kine"
     sourceid: latestGoTag
     spec:
       file: ".github/workflows/updatecli.yml"
-      key: jobs.updatecli.steps.1.with.go-version
+      key: jobs.updatecli.steps[1].with.go-version
+    failwhen: true
 
 targets:
-  updatecliWorkflowUsesLatestGoVersion:
+  updatecliWorkflowGoVersion:
     name: "Update go version in workflow to match latest go tag"
     kind: "yaml"
     scmid: "kine"
     sourceid: latestGoTag
     spec:
       file: ".github/workflows/updatecli.yml"
-      key: jobs.updatecli.steps.1.with.go-version
+      key: jobs.updatecli.steps[1].with.go-version
+
+actions:
+  # create a pull request which is not allowed to automerge
+  # ths commit message is automatically generated
+  github:
+    kind: "github"
+    scmid: "kine"
+    spec:
+      automerge: false
+      draft: false
+      mergemethod: squash
+      parent: false # this would allow for making a PR to an upstream fork
+
